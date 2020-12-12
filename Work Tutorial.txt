@@ -320,3 +320,7 @@ Delete student functionality
 ==============================================================
 Till now follow - https://www.youtube.com/watch?v=Ld4OGwpQ2Yk
 ==============================================================
+Deploy to heroku
+=====================
+1. To deploy this on heroku use "start": "node index.js" instead "start": "nodemon index.js". Because heroku does not know nodemon.
+2. Push this code with github and set heroku connect with github and auto deploy.
