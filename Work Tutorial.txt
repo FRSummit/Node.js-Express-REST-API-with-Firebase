@@ -1,0 +1,322 @@
+Steps of this project
+    1. Create nodejs project
+    2. Install required packages
+    3. Create folder structure
+    4. Create environments variable and firebase base database
+    5. Create express js server
+    6. Connect database
+    7. Add student functionality
+    8. Get all student student functionality
+    9. Get one/single student student functionality
+    10. Update  student functionality
+    11. Delete student functionality
+
+Create nodejs project
+==============================================================
+1. Create a new folder and open it in editor. (VS Code)
+2. Open terminal and write command - npm init.
+    >> npm init
+3. package.json will created
+
+Install required packages
+==============================================================
+>> npm install express firebase dotenv cors
+>> npm install nodemon --save-dev
+>> npm install body-parser
+
+Create folder structure
+==============================================================
+1. Create some folders and files
+    1. index.js
+    2. db.js
+    3. config.js
+    4. .env
+    5. controllers
+    6. routes
+    7. models
+
+Create environments variable and firebase base database
+==============================================================
+1. Open .env in editor and edit as bellow - 
+    1. Express Server config - 
+        PORT=8080
+        HOST=localhost
+        HOST_URL=http://localhost:8080
+
+    2. Firebase database config
+        1. Go to firebase console and create a new project there. Then get the configurations.
+            API_KEY=AIzaSyCXqz-q-2_1-PyABXi_mX-dvuVauQmsKuE
+            AUTH_DOMAIN=nodejs-express-firebase-crud.firebaseapp.com
+            DATABASE_URL=https://nodejs-express-firebase-crud.firebaseio.com
+            PROJECT_ID=nodejs-express-firebase-crud
+            STORAGE_BUCKET=nodejs-express-firebase-crud.appspot.com
+            MESSAGING_SENDER_ID=45720881687
+            APP_ID=1:45720881687:web:83af5b8ce4c92774032a52
+            MEASUREMENT_ID=G-15FSY3SNVD
+
+    3. Open config.js in editor and edit as bellow - 
+        'use strict';
+        const dotenv = require('dotenv');
+        const assert = require('assert');
+
+        dotenv.config();
+
+        const {
+            PORT,
+            HOST,
+            HOST_URL,
+            API_KEY,
+            AUTH_DOMAIN,
+            // DATABASE_URL,
+            PROJECT_ID,
+            STORAGE_BUCKET,
+            MESSAGING_SENDER_ID,
+            APP_ID,
+            MEASUREMENT_ID
+        } = process.env;
+
+        assert(PORT, 'PORT is required');
+
+        module.exports = {
+            port: PORT,
+            host: HOST,
+            url: HOST_URL,
+            firebaseConfig: {
+                apiKey: API_KEY,
+                authDomain: AUTH_DOMAIN,
+                projectId: PROJECT_ID,
+                storageBucket: STORAGE_BUCKET,
+                messagingSenderId: MESSAGING_SENDER_ID,
+                appId: APP_ID,
+                measurementId: MEASUREMENT_ID
+            }
+        }
+
+
+Create express js server
+==============================================================
+1. Open index.js in editor and edit as bellow - 
+    'use strict';
+    const express = require('express');
+    const cors = require('cors');
+    const bodyParser = require('body-parser');
+    const config = require('./config');
+
+    const app = express();
+
+    app.use(express.json());
+    app.use(cors());
+    app.use(bodyParser.json());
+
+    app.listen(config.port, () => console.log('App is listening on url  http:localhost:' + config.port));
+
+Connect database
+==============================================================
+1. Open db.js in editor and edit as bellow - 
+    const firebase = require('firebase');
+    const config = require('./config');
+
+    const db = firebase.initializeApp(config.firebaseConfig);
+
+    module.exports = db;
+
+Add student functionality
+==============================================================
+1. Create student.js in models folder and edit as bellow - 
+    class Student {
+        constructor(id, name, phone, email, address) {
+            this.id = id;
+            this.name = name;
+            this.phone = phone;
+            this.email = email;
+            this.address = address;
+        }
+    }
+
+    module.exports = Student;
+
+2. Create studentController.js in controllers folder and edit as bellow - 
+    'use strict';
+
+    const firebase = require('../db');
+    const Student = require('../models/student');
+    const firestore = firebase.firestore();
+
+    const addStudent = async (req, res, next) => {
+        try {
+            const data = req.body;
+            await firestore.collection('students').doc().set(data);
+            res.send('Record saved successfully');
+        } catch (error) {
+            res.status(400).send(error.message);
+        }
+    }
+
+    module.exports = {
+        addStudent
+    }
+
+3. Go to Cloud Firebase in firebase console and create db
+4. Create student-routes.js in routes folder and edit as bellow - 
+    const express = require('express');
+    const {addStudent} = require('../controllers/studentController');
+
+    const router = express.Router();
+
+    router.post('/student', addStudent);
+
+    module.exports = {
+        routes: router
+    }
+
+5. Import student router in index.js - 
+    const studentRoutes = require('./routes/student-routes');
+
+6. Add api for studentRoutes - 
+    app.use('/api', studentRoutes.routes);
+
+7. Open package.json and add start script inside scripts - 
+    "start": "nodemon index.js"
+
+8. Run app using npm start command.
+9. Open postman and add some post request
+
+Get all student student functionality
+==============================================================
+1. Go to studentController.js in controllers folder and add new functionality as bellow - 
+    const getAllStudents = async (req, res, next) => {
+        try {
+            const students = await firestore.collection('students');
+            const data = await students.get();
+            const studentArray = [];
+            if(data.empty) {
+                res.status(404).send('No student record found');
+            } else {
+                data.forEach(doc => {
+                    const student = new Student(
+                        doc.id,
+                        doc.data().name,
+                        doc.data().phone,
+                        doc.data().email,
+                        doc.data().address,
+                    );
+                    studentArray.push(student);
+                });
+                res.send(studentArray);
+            }
+        } catch (error) {
+            res.status(400).send(error.message);
+        }
+    }
+
+2. Add this function in export module - 
+    module.exports = {
+        addStudent,
+        getAllStudents
+    }
+
+3. Go to student-router.js and edit import as bellow - 
+    const {addStudent, getAllStudents} = require('../controllers/studentController');
+
+    and add get method - 
+        router.get('/students', getAllStudents);
+
+4. Go to postman and get students.
+
+Get one/single student student functionality
+==============================================================
+1. Go to studentController.js in controllers folder and add new functionality as bellow - 
+    const getStudent = async (req, res, next) => {
+        try {
+            const id = req.params.id;
+            const student = await firestore.collection('students').doc(id);
+            const data = await student.get();
+            if(!data.exists) {
+                res.status(404).send('Student with the given id not found');
+            } else {
+                res.send(data.data());
+            }
+        } catch (error) {
+            res.status(400).send(error.message)
+        }
+    }
+
+2. Add this function in export module - 
+    module.exports = {
+        addStudent,
+        getAllStudents,
+        getStudent
+    }
+
+3. Go to student-router.js and edit import as bellow - 
+    const {addStudent, getAllStudents, getStudent} = require('../controllers/studentController');
+
+    and add get method - 
+        router.get('/student/:id', getStudent);
+
+4. Go to postman and get the student.
+
+Update  student functionality
+==============================================================
+1. Go to studentController.js in controllers folder and add new functionality as bellow - 
+    const updateStudent = async (req, res, next) => {
+        try {
+            const id = req.params.id;
+            const data = req.body;
+            const student = await firestore.collection('students').doc(id);
+            await student.update();
+            res.send('Student record update successfully');
+        } catch (error) {
+            res.status(400).send(error.message)
+        }
+    }
+
+2. Add this function in export module - 
+    module.exports = {
+        addStudent,
+        getAllStudents,
+        getStudent,
+        updateStudent
+    }
+
+3. Go to student-router.js and edit import as bellow - 
+    const {addStudent, getAllStudents, getStudent, updateStudent} = require('../controllers/studentController');
+
+    and add get method - 
+        router.put('/student/:id', updateStudent);
+
+4. Go to postman and put the student data and update student.
+
+Delete student functionality
+==============================================================
+1. Go to studentController.js in controllers folder and add new functionality as bellow - 
+    const deleteStudent = async (req, res, next) => {
+        try {
+            const id = req.params.id;
+            const student = await firestore.collection('students').doc(id).delete();
+            res.send('Record deleted successfully');
+        } catch (error) {
+            res.status(400).send(error.message)
+        }
+    }
+
+2. Add this function in export module - 
+    module.exports = {
+        addStudent,
+        getAllStudents,
+        getStudent,
+        updateStudent,
+        deleteStudent
+    }
+
+3. Go to student-router.js and edit import as bellow - 
+    const {addStudent, getAllStudents, getStudent, updateStudent, deleteStudent} = require('../controllers/studentController');
+
+    and add get method - 
+        router.delete('/student/:id', deleteStudent);
+
+4. Go to postman and delete student data using id.
+
+==============================================================
+Till now follow - https://www.youtube.com/watch?v=Ld4OGwpQ2Yk
+==============================================================
